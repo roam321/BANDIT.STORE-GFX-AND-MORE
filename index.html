@@ -10,151 +10,225 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             background: white;
             padding: 40px;
             border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
             max-width: 500px;
             width: 100%;
-            text-align: center;
+            animation: slideIn 0.5s ease-out;
         }
-        
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .icon {
             font-size: 64px;
             margin-bottom: 20px;
+            animation: pulse 2s infinite;
         }
-        
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
         h1 {
             color: #333;
             margin-bottom: 15px;
             font-size: 28px;
         }
-        
+
         p {
             color: #666;
             line-height: 1.6;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
-        
-        .spinner {
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status.processing {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #667eea;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
-        .success {
-            color: #10b981;
+
+        .debug {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 12px;
+            text-align: left;
+            color: #495057;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
         }
-        
-        .error {
-            color: #ef4444;
+
+        .debug.show {
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="icon" id="icon">⏳</div>
-        <h1 id="title">Processing Verification...</h1>
-        <p id="message">Please wait while we verify your account.</p>
-        <div class="spinner" id="spinner"></div>
+        <h1 id="title">Processing...</h1>
+        <p id="message">Please wait while we complete your verification...</p>
+        <div class="loader" id="loader"></div>
+        <div class="status processing" id="status">Connecting to server...</div>
+        <div class="debug" id="debug"></div>
     </div>
 
     <script>
-        // YOUR BOT'S WEBHOOK URL - REPLACE THIS!
-        const BOT_WEBHOOK_URL = 'http://YOUR-BOT-SERVER:3000/webhook/verify';
-        
-        async function handleCallback() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const state = urlParams.get('state');
-            const error = urlParams.get('error');
+        // ⚠️ IMPORTANT: Replace this with your bot's webhook URL
+        const BOT_WEBHOOK_URL = 'http://YOUR-SERVER-IP:3000/webhook/verify';
+        // If using ngrok: 'https://abc123.ngrok.io/webhook/verify'
 
-            console.log('URL Parameters:', { code, state, error });
+        const icon = document.getElementById('icon');
+        const title = document.getElementById('title');
+        const message = document.getElementById('message');
+        const loader = document.getElementById('loader');
+        const status = document.getElementById('status');
+        const debug = document.getElementById('debug');
 
-            // Check for errors
-            if (error) {
-                showError('Authorization was cancelled or denied.');
-                return;
-            }
+        function log(msg) {
+            console.log(msg);
+            debug.innerHTML += `${msg}<br>`;
+            debug.classList.add('show');
+        }
 
-            if (!code || !state) {
-                showError('Missing authorization code. Please try again.');
-                return;
-            }
+        function showError(errorMsg) {
+            icon.textContent = '❌';
+            icon.style.animation = 'none';
+            title.textContent = 'Error';
+            title.style.color = '#ef4444';
+            message.textContent = errorMsg;
+            loader.style.display = 'none';
+            status.className = 'status error';
+            status.textContent = 'Failed to verify. Please try again.';
+        }
 
+        function showSuccess() {
+            icon.textContent = '✅';
+            icon.style.animation = 'none';
+            title.textContent = 'Success!';
+            title.style.color = '#10b981';
+            message.textContent = 'You have been verified successfully!';
+            loader.style.display = 'none';
+            status.className = 'status success';
+            status.textContent = 'You can close this window now.';
+        }
+
+        async function processCallback() {
             try {
-                // Decode state to get user and guild info
-                const stateData = JSON.parse(atob(state));
-                console.log('State data:', stateData);
-                
-                console.log('Sending webhook to:', BOT_WEBHOOK_URL);
-                
-                // Send the code to your bot
+                // Get URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const state = urlParams.get('state');
+
+                log(`📋 Code: ${code ? 'Received' : 'Missing'}`);
+                log(`📋 State: ${state ? 'Received' : 'Missing'}`);
+
+                if (!code || !state) {
+                    showError('Missing authorization parameters. Please try again.');
+                    return;
+                }
+
+                // Update status
+                status.textContent = 'Sending verification to bot...';
+                log('📤 Sending webhook request...');
+
+                // Send to bot webhook
                 const response = await fetch(BOT_WEBHOOK_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        code: code,
-                        state: stateData
-                    })
+                    body: JSON.stringify({ code, state })
                 });
 
-                console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Response data:', data);
+                log(`📥 Response status: ${response.status}`);
 
-                if (response.ok) {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+
+                const data = await response.json();
+                log(`📥 Response data: ${JSON.stringify(data)}`);
+
+                if (data.success) {
                     showSuccess();
                 } else {
-                    showError(data.error || 'Failed to verify. Please try again.');
+                    showError(data.error || 'Verification failed. Please try again.');
                 }
+
             } catch (error) {
-                console.error('Error:', error);
-                showError('An error occurred during verification. Check console for details.');
+                log(`❌ Error: ${error.message}`);
+                showError(`Failed to connect to server: ${error.message}\n\nMake sure BOT_WEBHOOK_URL is set correctly in the HTML file.`);
             }
         }
 
-        function showSuccess() {
-            document.getElementById('icon').textContent = '✅';
-            document.getElementById('title').textContent = 'Verification Successful!';
-            document.getElementById('title').className = 'success';
-            document.getElementById('message').textContent = 'You have been verified and can now access the server. You can close this window.';
-            document.getElementById('spinner').style.display = 'none';
-        }
-
-        function showError(message) {
-            document.getElementById('icon').textContent = '❌';
-            document.getElementById('title').textContent = 'Verification Failed';
-            document.getElementById('title').className = 'error';
-            document.getElementById('message').textContent = message;
-            document.getElementById('spinner').style.display = 'none';
-        }
-
-        // Start the process when page loads
-        handleCallback();
+        // Run on page load
+        processCallback();
     </script>
 </body>
 </html>
