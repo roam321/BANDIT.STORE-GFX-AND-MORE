@@ -3,140 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bandit Store Verification</title>
+    <title>Discord Verification</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
-
+        
         .container {
-            background: #2a2a2a;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             max-width: 500px;
             width: 100%;
-            padding: 50px 40px;
             text-align: center;
-            border: 1px solid #3a3a3a;
         }
-
-        .logo {
-            width: 150px;
-            height: 150px;
-            margin: 0 auto 30px;
-            position: relative;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .logo svg {
-            width: 100%;
-            height: 100%;
-            filter: drop-shadow(0 0 20px rgba(220, 38, 38, 0.5));
-        }
-
-        h1 {
-            color: #ffffff;
-            font-size: 28px;
-            margin-bottom: 15px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .subtitle {
-            color: #a0a0a0;
-            font-size: 16px;
-            margin-bottom: 40px;
-            line-height: 1.6;
-        }
-
-        .verify-btn {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            color: white;
-            border: none;
-            padding: 18px 50px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .verify-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(220, 38, 38, 0.5);
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        }
-
-        .verify-btn:active {
-            transform: translateY(-1px);
-        }
-
-        .info {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 1px solid #3a3a3a;
-            color: #808080;
-            font-size: 14px;
-        }
-
-        .shield-icon {
-            display: inline-block;
+        
+        .icon {
+            font-size: 64px;
             margin-bottom: 20px;
-            color: #dc2626;
-            font-size: 48px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+        
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success {
+            color: #10b981;
+        }
+        
+        .error {
+            color: #ef4444;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">
-            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="100" cy="100" r="90" fill="none" stroke="#dc2626" stroke-width="8"/>
-                <circle cx="100" cy="100" r="70" fill="none" stroke="#dc2626" stroke-width="8"/>
-                <path d="M 100 30 Q 130 60 100 90 Q 70 60 100 30 M 100 90 Q 100 120 70 140" 
-                      fill="#dc2626" stroke="#dc2626" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        
-        <div class="shield-icon">🛡️</div>
-        
-        <h1>Verification Required</h1>
-        
-        <p class="subtitle">
-            To access Bandit Store, please verify your account through our Discord server. 
-            This helps us maintain a secure community.
-        </p>
-        
-        <a href="https://discord.gg/JPgW3A44hy" class="verify-btn">
-            Verify Now
-        </a>
-        
-        <div class="info">
-            <p>🔒 Secure verification process</p>
-            <p>⚡ Instant access after verification</p>
-        </div>
+        <div class="icon" id="icon">⏳</div>
+        <h1 id="title">Processing Verification...</h1>
+        <p id="message">Please wait while we verify your account.</p>
+        <div class="spinner" id="spinner"></div>
     </div>
+
+    <script>
+        // YOUR BOT'S WEBHOOK URL - REPLACE THIS!
+        const BOT_WEBHOOK_URL = 'http://YOUR-BOT-SERVER:3000/webhook/verify';
+        
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+
+            console.log('URL Parameters:', { code, state, error });
+
+            // Check for errors
+            if (error) {
+                showError('Authorization was cancelled or denied.');
+                return;
+            }
+
+            if (!code || !state) {
+                showError('Missing authorization code. Please try again.');
+                return;
+            }
+
+            try {
+                // Decode state to get user and guild info
+                const stateData = JSON.parse(atob(state));
+                console.log('State data:', stateData);
+                
+                console.log('Sending webhook to:', BOT_WEBHOOK_URL);
+                
+                // Send the code to your bot
+                const response = await fetch(BOT_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        state: stateData
+                    })
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok) {
+                    showSuccess();
+                } else {
+                    showError(data.error || 'Failed to verify. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('An error occurred during verification. Check console for details.');
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('icon').textContent = '✅';
+            document.getElementById('title').textContent = 'Verification Successful!';
+            document.getElementById('title').className = 'success';
+            document.getElementById('message').textContent = 'You have been verified and can now access the server. You can close this window.';
+            document.getElementById('spinner').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('icon').textContent = '❌';
+            document.getElementById('title').textContent = 'Verification Failed';
+            document.getElementById('title').className = 'error';
+            document.getElementById('message').textContent = message;
+            document.getElementById('spinner').style.display = 'none';
+        }
+
+        // Start the process when page loads
+        handleCallback();
+    </script>
 </body>
 </html>
